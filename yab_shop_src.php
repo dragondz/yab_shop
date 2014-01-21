@@ -2444,7 +2444,7 @@ function yab_calc_promo_prices($price = false, $discount = 0)
 {
 	$price_tmp = $price * ($discount / 100);
 	$price = $price - $price_tmp;
-	return $price;
+	return round($price, 2);
 }
 
 function yab_remember_checkbox()
@@ -3337,7 +3337,6 @@ function yab_shop_first_install()
  */
 function yab_shop_table_exist($tbl)
 {
-	$tbl = PFX.$tbl;
 	$r = @safe_count($tbl, '1=1');
 
 	$all = yab_shop_get_preflist();
@@ -4036,13 +4035,12 @@ function yab_shop_get_preflist()
  */
 function yab_shop_update()
 {
-	global $DB;
-
 	// Upgrade yab_shop_prefs val field from VARCHAR to TEXT
-	$ret = @safe_field("DATA_TYPE", "INFORMATION_SCHEMA.COLUMNS", "table_name = '" . PFX . "yab_shop_prefs' AND table_schema = '" . $DB->db . "' AND column_name = 'val'");
-	if ($ret != 'text')
+	$ret = getRow("SHOW COLUMNS FROM ".PFX."yab_shop_prefs WHERE field='val'");
+
+	if ($ret['Type'] !== 'text')
 	{
-		safe_alter('yab_shop_prefs', "CHANGE `val` `val` TEXT NOT NULL DEFAULT ''", 1);
+		safe_alter('yab_shop_prefs', "CHANGE `val` `val` TEXT NOT NULL DEFAULT ''");
 	}
 
 	// Add new pref items
@@ -4152,7 +4150,7 @@ function yab_shop_install($table)
 	switch ($table)
 	{
 		case 'yab_shop_prefs':
-			$create_sql[] = "CREATE TABLE `".PFX."yab_shop_prefs` (
+			$create_sql[] = "CREATE TABLE IF NOT EXISTS `".PFX."yab_shop_prefs` (
 				`prefs_id` int(11) NOT NULL,
 				`name` varchar(255) NOT NULL,
 				`val` text NOT NULL default '',
@@ -4168,7 +4166,7 @@ function yab_shop_install($table)
 
 			foreach ($yab_shop_preflist as $pref_event => $items) {
 				foreach ($items as $pref_item => $fld) {
-					$create_sql[] = "INSERT INTO `".PFX."yab_shop_prefs` VALUES (1, '".$pref_item."', '".$fld['default']."', '".$fld['type']."', '".$pref_event."', '".$fld['html']."', '".$fld['position']."')";
+					$create_sql[] = "INSERT INTO `".PFX."yab_shop_prefs` VALUES (1, '".$pref_item."', '".$fld['default']."', '".$fld['type']."', '".$pref_event."', '".$fld['html']."', '".$fld['position']."') ON DUPLICATE KEY UPDATE prefs_id=prefs_id";
 				}
 			}
 
